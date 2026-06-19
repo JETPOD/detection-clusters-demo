@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Détection de clusters infectieux — Démo pédagogique</title>
+<link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&f[]=jetbrains-mono@400,500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --emerald-900: #064E3B;
+    --emerald-700: #047857;
+    --emerald-600: #059669;
+    --teal-700:    #0F766E;
+    --teal-500:    #14B8A6;
+    --emerald-50:  #ECFDF5;
+    --slate-900:   #0F172A;
+    --slate-700:   #334155;
+    --slate-500:   #64748B;
+    --slate-300:   #CBD5E1;
+    --slate-100:   #F1F5F9;
+    --slate-50:    #F8FAFC;
+    --white:       #FFFFFF;
+    --alert-bg:    #FEF3C7;
+    --alert-border:#F59E0B;
+    --alert-text:  #92400E;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'General Sans', system-ui, sans-serif;
+    background: var(--slate-50);
+    color: var(--slate-900);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--emerald-900) 0%, var(--teal-700) 100%);
+    color: var(--white);
+    padding: 2.5rem 1.5rem 2rem;
+    text-align: center;
+  }
+
+  header h1 {
+    font-size: clamp(1.6rem, 4vw, 2.2rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  header p {
+    font-size: 0.95rem;
+    opacity: 0.85;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  .intro-card {
+    background: var(--white);
+    border-left: 4px solid var(--teal-500);
+    padding: 1.25rem 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+  }
+
+  .intro-card h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--emerald-700);
+    margin-bottom: 0.5rem;
+  }
+
+  .intro-card p {
+    font-size: 0.95rem;
+    color: var(--slate-700);
+  }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.25rem;
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .control-group label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--slate-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .control-group input {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    padding: 0.4rem 0.6rem;
+    width: 80px;
+    border: 1px solid var(--slate-300);
+    border-radius: 4px;
+    background: var(--slate-50);
+    color: var(--slate-900);
+  }
+
+  .control-group input:focus {
+    outline: 2px solid var(--teal-500);
+    outline-offset: 1px;
+  }
+
+  button.run {
+    margin-left: auto;
+    background: var(--emerald-700);
+    color: var(--white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-family: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  button.run:hover:not(:disabled) {
+    background: var(--emerald-600);
+  }
+
+  button.run:disabled {
+    background: var(--slate-300);
+    cursor: not-allowed;
+  }
+
+  .status {
+    font-size: 0.85rem;
+    color: var(--slate-500);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .panel {
+    background: var(--white);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    background: var(--slate-100);
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--slate-300);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--slate-700);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .panel-body {
+    padding: 1.25rem;
+  }
+
+  pre.code {
+    background: var(--slate-900);
+    color: #E2E8F0;
+    padding: 1.5rem;
+    border-radius: 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    max-height: 420px;
+    overflow-y: auto;
+  }
+
+  pre.output {
+    background: var(--slate-900);
+    color: #A7F3D0;
+    padding: 1.5rem;
+    border-radius: 0;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    min-height: 200px;
+    max-height: 600px;
+    overflow-y: auto;
+  }
+
+  .alerts-grid {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+
+  .alert-card {
+    background: var(--alert-bg);
+    border-left: 4px solid var(--alert-border);
+    padding: 1rem 1.25rem;
+    border-radius: 4px;
+  }
+
+  .alert-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--alert-text);
+    margin-bottom: 0.5rem;
+  }
+
+  .alert-card .meta {
+    font-size: 0.85rem;
+    color: var(--slate-700);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.7;
+  }
+
+  .no-alert {
+    background: var(--emerald-50);
+    border-left: 4px solid var(--emerald-600);
+    padding: 1rem 1.25rem;
+    border-radius: 4px;
+    margin: 1.25rem;
+    color: var(--emerald-900);
+    font-weight: 500;
+  }
+
+  footer {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    font-size: 0.85rem;
+    color: var(--slate-500);
+    border-top: 1px solid var(--slate-300);
+    margin-top: 2rem;
+  }
+
+  footer a {
+    color: var(--teal-700);
+    text-decoration: none;
+  }
+
+  footer a:hover { text-decoration: underline; }
+
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--slate-300);
+    border-top-color: var(--emerald-700);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 0.4rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 640px) {
+    .controls { flex-direction: column; align-items: stretch; }
+    button.run { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Détection de clusters infectieux</h1>
+  <p>Démo pédagogique : un script Python qui repère les regroupements anormaux de cas dans des données de laboratoire. Tout s'exécute directement dans ton navigateur.</p>
+</header>
+
+<div class="container">
+
+  <div class="intro-card">
+    <h2>Comment ça marche ?</h2>
+    <p>Les données ci-dessous sont <strong>entièrement inventées</strong>. Le script regroupe les résultats par service et par germe, puis vérifie si plusieurs cas surviennent dans une fenêtre de temps courte. Tu peux modifier le seuil et la fenêtre pour voir comment les alertes changent.</p>
+  </div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label for="seuil">Seuil (nb de cas)</label>
+      <input type="number" id="seuil" min="2" max="10" value="3">
+    </div>
+    <div class="control-group">
+      <label for="fenetre">Fenêtre (heures)</label>
+      <input type="number" id="fenetre" min="6" max="240" value="48">
+    </div>
+    <span class="status" id="status"><span class="spinner"></span>Chargement de Python...</span>
+    <button class="run" id="run" disabled>Lancer la détection</button>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Alertes détectées</div>
+    <div id="alerts-container">
+      <div class="no-alert">Lance la détection pour voir le résultat.</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Sortie du script (terminal simulé)</div>
+    <pre class="output" id="output">En attente de l'exécution...</pre>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">Le code Python qui tourne (modifiable)</div>
+    <pre class="code" id="code-display"></pre>
+  </div>
+
+</div>
+
+<footer>
+  Dr Jean-Etienne PODIK · Médecin hygiéniste · Démo pour stage de découverte 2nde<br>
+  Python exécuté dans le navigateur via <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<script>
+const PYTHON_CODE = `
+from datetime import datetime, timedelta
+from collections import defaultdict
+import json
+
+# Jeu de données factice (aucun patient réel)
+resultats_labo = [
+    {"patient_id": "P001", "date": "2026-06-15 08:30", "service": "Médecine",    "germe": "Escherichia coli"},
+    {"patient_id": "P002", "date": "2026-06-15 14:10", "service": "Chirurgie",   "germe": "Staphylococcus aureus"},
+    {"patient_id": "P003", "date": "2026-06-16 09:00", "service": "Réanimation", "germe": "Klebsiella pneumoniae"},
+    {"patient_id": "P004", "date": "2026-06-16 18:45", "service": "Réanimation", "germe": "Klebsiella pneumoniae"},
+    {"patient_id": "P005", "date": "2026-06-17 11:20", "service": "Réanimation", "germe": "Klebsiella pneumoniae"},
+    {"patient_id": "P006", "date": "2026-06-17 16:00", "service": "Urgences",    "germe": "Escherichia coli"},
+    {"patient_id": "P007", "date": "2026-06-18 07:15", "service": "Médecine",    "germe": "Clostridioides difficile"},
+    {"patient_id": "P008", "date": "2026-06-18 13:30", "service": "Médecine",    "germe": "Clostridioides difficile"},
+    {"patient_id": "P009", "date": "2026-06-18 20:00", "service": "Médecine",    "germe": "Clostridioides difficile"},
+    {"patient_id": "P010", "date": "2026-06-19 09:45", "service": "Médecine",    "germe": "Clostridioides difficile"},
+    {"patient_id": "P011", "date": "2026-06-19 10:30", "service": "Chirurgie",   "germe": "Pseudomonas aeruginosa"},
+]
+
+def parser_date(texte):
+    return datetime.strptime(texte, "%Y-%m-%d %H:%M")
+
+def detecter_clusters(resultats, seuil, heures_fenetre):
+    fenetre = timedelta(hours=heures_fenetre)
+    groupes = defaultdict(list)
+    for cas in resultats:
+        groupes[(cas["service"], cas["germe"])].append(cas)
+
+    alertes = []
+    for (service, germe), cas_du_groupe in groupes.items():
+        cas_tries = sorted(cas_du_groupe, key=lambda c: parser_date(c["date"]))
+        for i, cas_initial in enumerate(cas_tries):
+            debut = parser_date(cas_initial["date"])
+            fin = debut + fenetre
+            cas_dans_fenetre = [c for c in cas_tries[i:] if parser_date(c["date"]) <= fin]
+            if len(cas_dans_fenetre) >= seuil:
+                alertes.append({
+                    "service":  service,
+                    "germe":    germe,
+                    "nb_cas":   len(cas_dans_fenetre),
+                    "debut":    cas_dans_fenetre[0]["date"],
+                    "fin":      cas_dans_fenetre[-1]["date"],
+                    "patients": [c["patient_id"] for c in cas_dans_fenetre],
+                })
+                break
+    return alertes
+
+def afficher_rapport(alertes, seuil, heures):
+    lignes = []
+    lignes.append("=" * 64)
+    lignes.append("  RAPPORT DE SURVEILLANCE, DÉTECTION DE CLUSTERS")
+    lignes.append("=" * 64)
+    lignes.append(f"  Paramètres : seuil = {seuil} cas, fenêtre = {heures} h")
+    lignes.append(f"  Données analysées : {len(resultats_labo)} résultats de laboratoire")
+    lignes.append("")
+    if not alertes:
+        lignes.append("  Aucun cluster détecté. Tout va bien.")
+    else:
+        lignes.append(f"  {len(alertes)} cluster(s) détecté(s) :")
+        lignes.append("")
+        for i, a in enumerate(alertes, 1):
+            lignes.append(f"  [ALERTE {i}] {a['service']} / {a['germe']}")
+            lignes.append(f"    Cas : {a['nb_cas']}  |  du {a['debut']} au {a['fin']}")
+            lignes.append(f"    Patients : {', '.join(a['patients'])}")
+            lignes.append(f"    Action : visite EOH, audit hygiène, vérification nettoyage.")
+            lignes.append("")
+    lignes.append("=" * 64)
+    return "\\n".join(lignes)
+
+# Point d'entrée appelé depuis JavaScript
+def run(seuil, heures):
+    alertes = detecter_clusters(resultats_labo, seuil, heures)
+    rapport = afficher_rapport(alertes, seuil, heures)
+    return json.dumps({"alertes": alertes, "rapport": rapport})
+`;
+
+document.getElementById('code-display').textContent = PYTHON_CODE.trim();
+
+let pyodide = null;
+
+async function initPyodide() {
+  const status = document.getElementById('status');
+  try {
+    pyodide = await loadPyodide();
+    pyodide.runPython(PYTHON_CODE);
+    status.innerHTML = 'Python prêt.';
+    document.getElementById('run').disabled = false;
+  } catch (err) {
+    status.innerHTML = 'Erreur de chargement : ' + err.message;
+  }
+}
+
+function renderAlertes(alertes) {
+  const container = document.getElementById('alerts-container');
+  if (!alertes || alertes.length === 0) {
+    container.innerHTML = '<div class="no-alert">Aucun cluster détecté avec ces paramètres.</div>';
+    return;
+  }
+  const html = alertes.map((a, i) => `
+    <div class="alert-card">
+      <h3>Alerte ${i + 1} : ${a.service} / ${a.germe}</h3>
+      <div class="meta">
+        Nb de cas : <strong>${a.nb_cas}</strong><br>
+        Période : du ${a.debut} au ${a.fin}<br>
+        Patients : ${a.patients.join(', ')}
+      </div>
+    </div>
+  `).join('');
+  container.innerHTML = `<div class="alerts-grid">${html}</div>`;
+}
+
+async function runDetection() {
+  if (!pyodide) return;
+  const seuil = parseInt(document.getElementById('seuil').value, 10);
+  const heures = parseInt(document.getElementById('fenetre').value, 10);
+  const btn = document.getElementById('run');
+  btn.disabled = true;
+  btn.textContent = 'Exécution...';
+  try {
+    const resultJson = pyodide.runPython(`run(${seuil}, ${heures})`);
+    const data = JSON.parse(resultJson);
+    document.getElementById('output').textContent = data.rapport;
+    renderAlertes(data.alertes);
+  } catch (err) {
+    document.getElementById('output').textContent = 'Erreur : ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Lancer la détection';
+  }
+}
+
+document.getElementById('run').addEventListener('click', runDetection);
+initPyodide();
+</script>
+
+</body>
+</html>
