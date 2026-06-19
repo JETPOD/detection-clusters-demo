@@ -8,7 +8,7 @@ Montrer concrètement comment on repère le début d'une épidémie hospitalièr
 
 ## Lancer la démo
 
-Ouvre simplement [https://jepodik.github.io/detection-clusters-demo/](https://jepodik.github.io/detection-clusters-demo/) (lien activé après publication GitHub Pages).
+Ouvre simplement [https://jetpod.github.io/detection-clusters-demo/](https://jetpod.github.io/detection-clusters-demo/).
 
 Tu peux :
 
